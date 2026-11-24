@@ -1,0 +1,29 @@
+name: Publish to itch.io
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package HTML5 build
+        run: |
+          mkdir -p dist
+          cp index.html dist/index.html
+          cd dist
+          zip -9 ../gravity-shift-html5.zip index.html
+      - name: Install butler
+        run: |
+          curl -L https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default -o butler.zip
+          unzip butler.zip
+          chmod +x butler
+      - name: Push build to itch.io
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+          ITCH_TARGET: ${{ vars.ITCH_TARGET }}
+        run: |
+          test -n "$BUTLER_API_KEY" || (echo "Missing repository secret BUTLER_API_KEY" && exit 1)
+          test -n "$ITCH_TARGET" || (echo "Missing repository variable ITCH_TARGET (username/game-slug)" && exit 1)
+          ./butler push dist "$ITCH_TARGET" --userversion "$GITHUB_SHA"
